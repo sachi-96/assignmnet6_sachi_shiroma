@@ -1,0 +1,140 @@
+---
+title: 'Lizard Lengths Report'
+author: "Sachi Shiroma"
+date: "11/29/2021"
+output: html_document
+---
+# Introduction 
+This data shows the various lengths in millimeters of lizard species by sex.  We will determine whether or not there a significant difference in total length difference in mean total length between female lizards belonging to two different types of species (Colorado Checkered and Desert Grassland).  The methods being used will be from the calculations of the mean lengths of female lizards by species, as well as the standard deviation and the population counts. The Cohen's d effect size will also be calculated from the mean values of the two different species of female lizards and will be used to determine if there is a siginificant difference.   
+
+```{r setup, include=FALSE}
+# Setup Chunk
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+library(here)
+library(tidyverse)
+library(janitor)
+library(kableExtra)
+library(effsize)
+library(broom)
+```
+
+```{r}
+# Read in the data
+lizard_data <- read_csv(here("data", "lizards.csv"))
+```
+
+
+```{r}
+# Create a subset with these columns: species, sex and lizard lengths
+lizards_subset <- lizard_data %>% 
+select(spp, sex, total_length) 
+
+```
+
+
+```{r}
+# Create a subset with just female lizards 
+lizards_sex_species <- lizards_subset %>% 
+ filter(sex == "F") %>%  
+# Filter species for Colorado and Desert lizards 
+ filter(spp %in% c("CNUN", "CNTE")) %>% 
+# Change species to full names
+ mutate(spp = case_when(
+   spp == "CNTE" ~ "Colorado Checkered",
+   spp == "CNUN" ~ "Desert Grassland"
+ )) %>% 
+drop_na()
+```
+
+```{r}
+# Assinging graph values
+ggplot(data = lizards_sex_species, aes(x = total_length, fill = spp)) + 
+  geom_boxplot(bins = 40) + 
+#Assigning names for key
+  scale_fill_manual(values = c("purple", "blue"), name = "Species") + 
+  labs(x = "Length", y = "", title = "Lengths of Female Lizards by Species" ) 
+```
+
+F.1 This graph compares the lengths of female lizards in millimeters by species (Colorado Checkered Lizard and Desert Grassland Lizard).  
+
+```{r}
+# Get mean, sd and sample size of female lizard lengths
+lizard_stats <- lizards_sex_species %>% 
+  group_by(spp) %>% 
+  summarize(mean_length = round(mean(total_length, na.rm = TRUE),2),
+            sd_length = round(sd(total_length, na.rm = TRUE),2),
+            sample_size = n()) 
+
+lizard_stats %>% 
+# Create a table with titles and labels 
+  kable(caption = "Table 1. Statistics for Female Lizard Species", col.names = c("Species",
+                      "Mean Diameter (mm)",
+                      "Standard Deviation",
+                      "Sample Size (n)")) %>% 
+  kable_styling(full_width = TRUE) 
+```
+
+```{r}
+# Create subsets to do hypothesis testing of Colorado Lizards and Desert Lizards
+species_colorado <- lizards_sex_species %>% 
+  filter(spp == "Colorado Checkered") %>% 
+  drop_na(total_length) %>% 
+  pull(total_length)
+  
+species_desert <- lizards_sex_species %>% 
+  filter(spp == "Desert Grassland") %>% 
+  drop_na(total_length) %>% 
+  pull(total_length)
+```
+
+
+```{r}
+# QQ-plot to find distribution 
+qqnorm(species_colorado)
+qqnorm(species_desert)
+```
+
+
+```{r}
+# Histogram 
+hist(species_colorado)
+hist(species_desert)
+```
+
+
+```{r}
+# Means
+mean(species_colorado)
+mean(species_desert)
+```
+
+```{r}
+# Standard Deviation 
+sd(species_colorado)
+sd(species_desert)
+```
+
+```{r}
+# Two-sample T-test 
+lizard_ttest <- t.test(species_colorado, species_desert)
+# Reorganize and Tidy up T-test outcomes
+lizard_ttest_tidy <- tidy(lizard_ttest) 
+```
+
+
+```{r}
+# Calculate Cohen's D effect size
+lizard_cohens_d <- cohen.d(species_colorado , species_desert) 
+```
+
+# Summary 
+- The distribution of the variables is relatively normal 
+- The standard deviations for the means of the two lizard species were low, meaning that 
+-The effect size (Cohen's d) is `r round(lizard_cohens_d$estimate,2)`.  The outcome of an unpaired two-sample t-test is `r round(lizard_ttest_tidy$estimate,2)`.  
+-Conen's D is very high so there is a strong variety and it is significant due to the p-value.  
+-The actual difference of the means is `r round(mean_species_colorado - mean_species_desert$estimate,2)`
+
+** Citation **
+Lightfoot, D. 2017. Lizard pitfall trap data (LTER-II, LTER-III) ver 36. Environmental Data Initiative. https://doi.org/10.6073/pasta/ff37b4cace16a9943575f3fd7067064e 
+
+# End Task

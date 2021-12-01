@@ -1,0 +1,57 @@
+---
+title: "Mono Lake Visualization Report"
+author: "Sachi Shiroma"
+date: "11/30/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+# Setup Chunk
+knitr::opts_chunk$set(echo = TRUE)
+library(here)
+library(tidyverse)
+library(janitor)
+library(paletteer)
+library(sf)
+library(jpeg)
+```
+
+```{r}
+# Read in the Data and Skip the first 4 rows of the data set 
+mono_lake_data <- read_csv(here("data", "mono_lake_annual_levels.csv"), skip = 5) %>% 
+clean_names()
+```
+
+```{r}
+my_image <- readJPEG("mono-lake-pale-sunset-1200w.jpg") %>% 
+  lim <- par() %>% 
+  grid() %>% 
+rasterImage(my_image,
+            x = 0, y =2017, 
+            ybottom = 6370, ytop = 6420) 
+
+
+```
+
+
+```{r}
+ggplot(data = mono_lake_data, aes(x = year, y = lake_level_feet_above_sea_level)) + 
+geom_line(color = "aquamarine", size = 1.3)+
+theme_classic() +
+theme(plot.title = element_text(color = "#0099f9", size = 16, face = "bold", hjust = 0.5), 
+  axis.title.x = element_text(color = "#0099f9", size = 14, face = "italic"),
+  axis.title.y = element_text(color = "#0099f9", size = 14, face = "italic"))+
+# Add lake level values on the line
+geom_text(aes(label = lake_level_feet_above_sea_level),
+  nudge_x = 0.01,
+  nudge_y = 0.01,
+  check_overlap = TRUE,
+  size = 2)+
+  gg
+# Assigning names for key 
+  labs(x = "Year", y = "Lake Level(ft)", title = "Lake Levels Above Sea Level by Year")+
+annotate("segment", x = 1996, xend = 2004, y = 6384, yend = 6395) +
+annotate(geom = "text", x = 1998, y = 6400, label = "StateWater Board Complication",
+           size = 3, hjust = "center", color = "blue")
+```
+F.1 This graph shows the lake levels above sea level by year.  The lake levels are measured in feet.  

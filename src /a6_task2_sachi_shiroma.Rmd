@@ -1,0 +1,92 @@
+---
+title: "Political Affiliation and Environmentalism Report"
+author: "Sachi Shiroma"
+date: "11/28/2021"
+output: html_document
+---
+# Introduction 
+This data analyzes voter demographics such as political affiliation and environmental views.  We will see if there is an association between political affiliation (liberal or conservative) whether or not they consider themselves to be an environmentalist.  To calculate this association, a Pearson's chi-square test, degrees of freedom and the p-value will be calculated. 
+
+```{r setup, include=FALSE, warning = FALSE, message = FALSE, }
+#Setup Packages
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
+library(tidyverse)
+library(here)
+library(janitor)
+library(lubridate)
+library(kableExtra)
+library(dplyr)
+```
+
+```{r}
+# Read in the data set
+conservation <- read_csv(here("data", "conservation_survey.csv"))
+```
+
+```{r}
+# Keep variables `ENV_ID` and `POL_OR` 
+conservation_new <- conservation %>% 
+  select(ENV_ID, POL_OR) %>% 
+# Tidy up column names
+  clean_names()
+```
+
+```{r}
+# Make a new column with "conservative" if POL_OR = 1-3 and "liberal if POL_OR = 5-7
+conservation_new_add <- conservation_new %>% 
+ mutate(Affiliation = case_when(
+    pol_or %in% c("1","2","3") ~ "Conservative",
+    pol_or %in% c("5","6","7") ~ "Liberal")) %>% 
+# Exclude other political affiliations in POL_OR = 4,8,9
+drop_na() %>% 
+# Change environmental responses to Yes, No, Unsure
+  mutate(env_id = case_when(
+    env_id == "1" ~ "Yes",
+    env_id == "2" ~ "No",
+    env_id == "3" ~ "Unsure")) %>% 
+  mutate(env_id = factor(env_id, levels = c("Yes", "No", "Unsure")))
+```
+
+
+```{r, include = FALSE}
+# Creating a table of survey response count
+conservation_response <- conservation_new_add %>% 
+  tabyl(Affiliation, env_id)
+conservation_response
+```
+# Comparison of Political Identities and Whether they Consider themselves Envrionmentalists
+```{r}
+# Generate a subset for the table of Party Affiliation and Environmental Response 
+conservation_response_contingency <- conservation_new_add %>% 
+  janitor::tabyl(Affiliation, env_id)
+# Get percentages of proportions 
+conservation_proportions <- conservation_response_contingency %>% 
+  janitor::adorn_percentages() %>% 
+  janitor::adorn_pct_formatting(digits = 2) %>% 
+  janitor::adorn_ns()
+# Create a contingency table 
+conserv_prop <- conservation_response_contingency %>% 
+  column_to_rownames(var = "Affiliation")
+# Table of subset and figure caption 
+kable(head(conservation_proportions),
+caption = "<b> Table 1: Political Identity and Environmentalism <b>") %>% 
+# Add borders in table
+  kable_styling(bootstrap_options = "bordered",
+                full_width = F)
+ 
+```
+
+```{r}
+# Chi-square calculation
+conserv_prop_chi <- chisq.test(conserv_prop)
+# Clean up the table outcome 
+conserv_prop_chi_tidy <- broom::tidy(conserv_prop_chi)
+```
+
+# Summary
+There is a significant association between political affiliation and environmental stance.  This means that these two variables are not independent of each other.  The chi -square value, ($\chi$^2^(`r conserv_prop_chi_tidy$parameter`) = `r round(conserv_prop_chi_tidy$statistic,2)`) is high, indicating that there is a large difference between actual and expected values of political affiliation and environmental stance.  This represents a significant association between the two variables.  The p-value, (*p* = `r round(conserv_prop_chi_tidy$p.value,3)`) indicates that there is sufficient evidence to reject the null hypothesis of independence.  This means the alternative hypothesis that political affiliation and environmental stance are dependent of each other, must be accepted.  The percentages support the claim that the two variables are dependent of each other because a majority (53.73%) of liberals consider themselves environmentalists and a majority (50.24%) of conservatives do not consider themselves environmentalists.  The percentage of liberals and conservatives that are unsure of their environmental stance are similar (21.80% and 16.11%), meaning there is no significant association between the two political groups in this response.  The table values and calculations ultimately show that there is a strong association indicating liberals are more likely to consider themselves environmentalists and conservatives are more likely to not consider themselves environmentalists. 
+
+**Citation**
+Andrews Forest LTER Site and C. Batavia. 2019. Influences on charitable giving for conservation: Online survey data of 1,331 respondents across the US, August 2017 ver 3. Environmental Data Initiative. https://doi.org/10.6073/pasta/926e6270e324a1322a900da14d38b96c
+
+# End Task
